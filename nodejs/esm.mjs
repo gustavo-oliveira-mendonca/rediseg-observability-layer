@@ -1,14 +1,21 @@
+import logger from '@rediseg/logger-debug'
 import newrelic from 'newrelic'
 import fs from 'node:fs'
 import path from 'node:path'
 
-process.env.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || process.env.AWS_LAMBDA_FUNCTION_NAME
-process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED = process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED || 'true'
-process.env.NEW_RELIC_NO_CONFIG_FILE = process.env.NEW_RELIC_NO_CONFIG_FILE || 'true'
+process.env.NEW_RELIC_APP_NAME =
+  process.env.NEW_RELIC_APP_NAME || process.env.AWS_LAMBDA_FUNCTION_NAME
+process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED =
+  process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED || 'true'
+process.env.NEW_RELIC_NO_CONFIG_FILE =
+  process.env.NEW_RELIC_NO_CONFIG_FILE || 'true'
 process.env.NEW_RELIC_TRUSTED_ACCOUNT_KEY =
   process.env.NEW_RELIC_TRUSTED_ACCOUNT_KEY || process.env.NEW_RELIC_ACCOUNT_ID
 
-if (process.env.LAMBDA_TASK_ROOT && typeof process.env.NEW_RELIC_SERVERLESS_MODE_ENABLED !== 'undefined') {
+if (
+  process.env.LAMBDA_TASK_ROOT &&
+  typeof process.env.NEW_RELIC_SERVERLESS_MODE_ENABLED !== 'undefined'
+) {
   delete process.env.NEW_RELIC_SERVERLESS_MODE_ENABLED
 }
 function getNestedHandler(object, nestedProperty) {
@@ -16,6 +23,31 @@ function getNestedHandler(object, nestedProperty) {
     return nested && nested[key]
   }, object)
 }
+
+function wrapWithLogger(userHandler) {
+  return async function handler(event, context) {
+    logger.debug(`Setting context: ${JSON.stringify(context)}`)
+    logger.setContext({
+      'request.id': context.awsRequestId,
+      'faas.execution': context.awsRequestId,
+      'faas.name': process.env.AWS_LAMBDA_FUNCTION_NAME,
+      'faas.arn': context.invokedFunctionArn,
+      'aws.region': process.env.AWS_REGION,
+    })
+
+    try {
+      logger.debug('Invocation started')
+
+      const result = await userHandler(event, context)
+      logger.debug('Invocation completed')
+      return result
+    } catch (err) {
+      logger.error('Invocation error', { error: err })
+      throw err
+    }
+  }
+}
+
 function getHandlerPath() {
   let handler
   const { NEW_RELIC_LAMBDA_HANDLER } = process.env
@@ -39,7 +71,7 @@ function getHandlerPath() {
   const moduleToImport = handler.slice(0, firstDotAfterSlash)
   const handlerToWrap = handler.slice(firstDotAfterSlash + 1)
 
-  return {moduleToImport, handlerToWrap}
+  return { moduleToImport, handlerToWrap }
 }
 
 function handleRequireImportError(e, moduleToImport) {
@@ -62,7 +94,9 @@ function getFullyQualifiedModulePath(modulePath, extensions) {
 
   if (!fullModulePath) {
     throw new Error(
-      `Unable to resolve module file at ${modulePath} with the following extensions: ${extensions.join(',')}`
+      `Unable to resolve module file at ${modulePath} with the following extensions: ${extensions.join(
+        ','
+      )}`
     )
   }
 
@@ -72,7 +106,10 @@ function getFullyQualifiedModulePath(modulePath, extensions) {
 async function getModuleWithImport(appRoot, moduleToImport) {
   const modulePath = path.resolve(appRoot, moduleToImport)
   const validExtensions = ['.mjs', '.js']
-  const fullModulePath = getFullyQualifiedModulePath(modulePath, validExtensions)
+  const fullModulePath = getFullyQualifiedModulePath(
+    modulePath,
+    validExtensions
+  )
 
   try {
     return await import(fullModulePath)
@@ -98,8 +135,8 @@ function validateHandlerDefinition(userHandler, handlerName, moduleName) {
 const { LAMBDA_TASK_ROOT = '.' } = process.env
 const { moduleToImport, handlerToWrap } = getHandlerPath()
 
-const userHandler  = await getHandler() 
-const handler = newrelic.setLambdaHandler(userHandler)
+const userHandler = await getHandler()
+const handler = newrelic.setLambdaHandler(wrapWithLogger(userHandler))
 
 async function getHandler() {
   const userModule = await getModuleWithImport(LAMBDA_TASK_ROOT, moduleToImport)
@@ -108,6 +145,5 @@ async function getHandler() {
 
   return userHandler
 }
-  
-export { handler, getHandlerPath }
 
+export { getHandlerPath, handler }
