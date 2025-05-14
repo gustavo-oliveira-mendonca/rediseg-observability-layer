@@ -1,4 +1,4 @@
-FROM node:22 AS builder
+FROM node:16 AS builder
 
 RUN apt-get update \
     && apt-get install -y curl unzip zip
@@ -11,7 +11,7 @@ COPY --chown=newrelic-lambda-layers libBuild.sh .
 COPY --chown=newrelic-lambda-layers nodejs nodejs/
 
 WORKDIR nodejs
-RUN ./publish-layers.sh build-22
+RUN ./publish-layers.sh build-16
 
 FROM python:3.8
 
@@ -26,4 +26,4 @@ COPY nodejs nodejs/
 COPY --from=builder /home/newrelic-lambda-layers/nodejs/dist nodejs/dist
 
 WORKDIR nodejs
-CMD ["./publish-layers.sh","publish-22"]
+CMD ["./publish-layers.sh","publish-16"]

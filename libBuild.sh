@@ -80,7 +80,7 @@ function fetch_extension {
 function download_extension {
     fetch_extension $@
 
-    unzip $EXTENSION_DIST_ZIP -d .
+    unzip -oq $EXTENSION_DIST_ZIP -d .
     rm -f $EXTENSION_DIST_ZIP
 }
 
@@ -122,6 +122,9 @@ function layer_name_str() {
     "python3.13")
       rt_part="Python313"
       ;;
+    "nodejs16.x")
+      rt_part="NodeJS16X"
+      ;;  
     "nodejs18.x")
       rt_part="NodeJS18X"
       ;;
@@ -188,9 +191,12 @@ function s3_prefix() {
     "python3.13")
       name="nr-python3.13"
       ;;
+    "nodejs16.x")
+      name="nr-nodejs16.x"
+      ;;
     "nodejs18.x")
       name="nr-nodejs18.x"
-      ;;
+      ;;  
     "nodejs20.x")
       name="nr-nodejs20.x"
       ;;
@@ -219,7 +225,7 @@ function agent_name_str() {
         "provided")
             agent_name="provided"
             ;;
-        "nodejs18.x"|"nodejs20.x"|"nodejs22.x")
+        "nodejs16.x"|"nodejs18.x"|"nodejs20.x"|"nodejs22.x")
             agent_name="Node"
             ;;
         "ruby3.2"|"ruby3.3"|"ruby3.4")

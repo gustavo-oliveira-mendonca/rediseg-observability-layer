@@ -1,18 +1,49 @@
 'use strict'
 
-process.env.NEW_RELIC_APP_NAME = process.env.NEW_RELIC_APP_NAME || process.env.AWS_LAMBDA_FUNCTION_NAME
-process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED = process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED || 'true'
-process.env.NEW_RELIC_NO_CONFIG_FILE = process.env.NEW_RELIC_NO_CONFIG_FILE || 'true'
+process.env.NEW_RELIC_APP_NAME =
+  process.env.NEW_RELIC_APP_NAME || process.env.AWS_LAMBDA_FUNCTION_NAME
+process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED =
+  process.env.NEW_RELIC_DISTRIBUTED_TRACING_ENABLED || 'true'
+process.env.NEW_RELIC_NO_CONFIG_FILE =
+  process.env.NEW_RELIC_NO_CONFIG_FILE || 'true'
 process.env.NEW_RELIC_TRUSTED_ACCOUNT_KEY =
   process.env.NEW_RELIC_TRUSTED_ACCOUNT_KEY || process.env.NEW_RELIC_ACCOUNT_ID
 
-if (process.env.LAMBDA_TASK_ROOT && typeof process.env.NEW_RELIC_SERVERLESS_MODE_ENABLED !== 'undefined') {
+if (
+  process.env.LAMBDA_TASK_ROOT &&
+  typeof process.env.NEW_RELIC_SERVERLESS_MODE_ENABLED !== 'undefined'
+) {
   delete process.env.NEW_RELIC_SERVERLESS_MODE_ENABLED
 }
 
 const newrelic = require('newrelic')
 const fs = require('node:fs')
 const path = require('node:path')
+const logger = require('@rediseg/logger-debug')
+
+function wrapWithLogger(userHandler) {
+  return async function handler(event, context) {
+    logger.debug(`Setting context: ${JSON.stringify(context)}`)
+    logger.setContext({
+      'request.id': context.awsRequestId,
+      'faas.execution': context.awsRequestId,
+      'faas.name': process.env.AWS_LAMBDA_FUNCTION_NAME,
+      'faas.arn': context.invokedFunctionArn,
+      'aws.region': process.env.AWS_REGION,
+    })
+
+    try {
+      logger.debug('Invocation started')
+
+      const result = await userHandler(event, context)
+      logger.debug('Invocation completed')
+      return result
+    } catch (err) {
+      logger.error('Invocation error', { error: err })
+      throw err
+    }
+  }
+}
 
 function getHandlerPath() {
   let handler
@@ -57,7 +88,9 @@ function getFullyQualifiedModulePath(modulePath, extensions) {
 
   if (!fullModulePath) {
     throw new Error(
-      `Unable to resolve module file at ${modulePath} with the following extensions: ${extensions.join(',')}`
+      `Unable to resolve module file at ${modulePath} with the following extensions: ${extensions.join(
+        ','
+      )}`
     )
   }
 
@@ -67,7 +100,10 @@ function getFullyQualifiedModulePath(modulePath, extensions) {
 async function getModuleWithImport(appRoot, moduleToImport) {
   const modulePath = path.resolve(appRoot, moduleToImport)
   const validExtensions = ['.mjs', '.js']
-  const fullModulePath = getFullyQualifiedModulePath(modulePath, validExtensions)
+  const fullModulePath = getFullyQualifiedModulePath(
+    modulePath,
+    validExtensions
+  )
 
   try {
     return await import(fullModulePath)
@@ -79,7 +115,10 @@ async function getModuleWithImport(appRoot, moduleToImport) {
 function getModuleWithRequire(appRoot, moduleToImport) {
   const modulePath = path.resolve(appRoot, moduleToImport)
   const validExtensions = ['.cjs', '.js']
-  const fullModulePath = getFullyQualifiedModulePath(modulePath, validExtensions)
+  const fullModulePath = getFullyQualifiedModulePath(
+    modulePath,
+    validExtensions
+  )
 
   try {
     return require(fullModulePath)
@@ -109,22 +148,28 @@ const { LAMBDA_TASK_ROOT = '.' } = process.env
 const { moduleToImport, handlerToWrap } = getHandlerPath()
 
 if (process.env.NEW_RELIC_USE_ESM === 'true') {
-  patchedHandlerPromise = getHandler().then(userHandler => {
-    return newrelic.setLambdaHandler(userHandler)
+  console.log(`NEW_RELIC_USE_ESM=true`)
+  patchedHandlerPromise = getHandler().then((userHandler) => {
+    return newrelic.setLambdaHandler(wrapWithLogger(userHandler))
   })
 } else {
-  wrappedHandler = newrelic.setLambdaHandler(getHandlerSync())
+  console.log(`NEW_RELIC_USE_ESM=false`)
+  wrappedHandler = newrelic.setLambdaHandler(wrapWithLogger(getHandlerSync()))
 }
 
 async function getHandler() {
-  const userHandler = (await getModuleWithImport(LAMBDA_TASK_ROOT, moduleToImport))[handlerToWrap]
+  const userHandler = (
+    await getModuleWithImport(LAMBDA_TASK_ROOT, moduleToImport)
+  )[handlerToWrap]
   validateHandlerDefinition(userHandler, handlerToWrap, moduleToImport)
 
   return userHandler
 }
 
 function getHandlerSync() {
-  const userHandler = getModuleWithRequire(LAMBDA_TASK_ROOT, moduleToImport)[handlerToWrap]
+  const userHandler = getModuleWithRequire(LAMBDA_TASK_ROOT, moduleToImport)[
+    handlerToWrap
+  ]
   validateHandlerDefinition(userHandler, handlerToWrap, moduleToImport)
 
   return userHandler
@@ -132,11 +177,12 @@ function getHandlerSync() {
 
 async function patchHandler() {
   const args = Array.prototype.slice.call(arguments)
-  return patchedHandlerPromise
-    .then(_wrappedHandler => _wrappedHandler.apply(this, args))
+  return patchedHandlerPromise.then((_wrappedHandler) =>
+    _wrappedHandler.apply(this, args)
+  )
 }
 
-let handler 
+let handler
 
 if (process.env.NEW_RELIC_USE_ESM === 'true') {
   handler = patchHandler
@@ -144,8 +190,7 @@ if (process.env.NEW_RELIC_USE_ESM === 'true') {
   handler = wrappedHandler
 }
 
-
 module.exports = {
   handler,
-  getHandlerPath
+  getHandlerPath,
 }

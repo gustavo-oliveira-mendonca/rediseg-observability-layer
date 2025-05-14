@@ -1,4 +1,4 @@
-FROM node:18 as builder
+FROM node:18 AS builder
 
 RUN apt-get update \
     && apt-get install -y curl unzip zip
@@ -19,11 +19,11 @@ RUN useradd -m newrelic-lambda-layers
 USER newrelic-lambda-layers
 WORKDIR /home/newrelic-lambda-layers
 RUN pip3 install -U awscli --user
-ENV PATH /home/newrelic-lambda-layers/.local/bin/:$PATH
+ENV PATH=/home/newrelic-lambda-layers/.local/bin/:$PATH
 
 COPY libBuild.sh .
 COPY nodejs nodejs/
 COPY --from=builder /home/newrelic-lambda-layers/nodejs/dist nodejs/dist
 
 WORKDIR nodejs
-CMD ./publish-layers.sh publish-18
+CMD ["./publish-layers.sh","publish-18"]
