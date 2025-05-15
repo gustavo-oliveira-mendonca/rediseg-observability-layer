@@ -33,7 +33,13 @@ function build_wrapper {
   cp package-lock.json $BUILD_DIR/ || true
   npm install --omit=dev --prefix $BUILD_DIR
 
-  NEWRELIC_AGENT_VERSION=$(npm list newrelic --prefix $BUILD_DIR | grep newrelic@ | grep -v deduped | awk -F '@' '{print $2}' | head -n1)
+  NEWRELIC_AGENT_VERSION=$(npm list newrelic --prefix "$BUILD_DIR" \
+  | grep newrelic@ \
+  | grep -v deduped \
+  | awk -F '@' '{print $2}' \
+  | awk '{print $1}' \
+  | head -n1)
+    echo "Resolved NEWRELIC_AGENT_VERSION: $NEWRELIC_AGENT_VERSION"
   touch $DIST_DIR/nr-env
   echo "NEWRELIC_AGENT_VERSION=$NEWRELIC_AGENT_VERSION" > $DIST_DIR/nr-env
 
