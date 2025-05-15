@@ -39,7 +39,6 @@ function build_wrapper {
   | awk -F '@' '{print $2}' \
   | awk '{print $1}' \
   | head -n1)
-    echo "Resolved NEWRELIC_AGENT_VERSION: $NEWRELIC_AGENT_VERSION"
   touch $DIST_DIR/nr-env
   echo "NEWRELIC_AGENT_VERSION=$NEWRELIC_AGENT_VERSION" > $DIST_DIR/nr-env
 

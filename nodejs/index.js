@@ -148,12 +148,10 @@ const { LAMBDA_TASK_ROOT = '.' } = process.env
 const { moduleToImport, handlerToWrap } = getHandlerPath()
 
 if (process.env.NEW_RELIC_USE_ESM === 'true') {
-  console.log(`NEW_RELIC_USE_ESM=true`)
   patchedHandlerPromise = getHandler().then((userHandler) => {
     return newrelic.setLambdaHandler(wrapWithLogger(userHandler))
   })
 } else {
-  console.log(`NEW_RELIC_USE_ESM=false`)
   wrappedHandler = newrelic.setLambdaHandler(wrapWithLogger(getHandlerSync()))
 }
 
