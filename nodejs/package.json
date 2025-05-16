@@ -31,7 +31,7 @@
   },
   "homepage": "https://github.com/newrelic/newrelic-lambda-layers#readme",
   "dependencies": {
-    "@rediseg/logger-debug": "^1.0.32",
+    "@rediseg/logger": "^1.6.0",
     "newrelic": "^12.9.0"
   },
   "keywords": [
