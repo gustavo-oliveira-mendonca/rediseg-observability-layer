@@ -31,6 +31,19 @@ function build_wrapper {
   mkdir -p $BUILD_DIR
   cp package.json $BUILD_DIR/
   cp package-lock.json $BUILD_DIR/ || true
+
+    if [[ "$node_version" == "16" ]]; then
+    echo "Patching package.json for Node.js 16 compatibility"
+
+    # Altera a versão do newrelic em dependencies
+    sed -i 's/"newrelic": *"[^"]*"/"newrelic": "11.23.2"/' "$BUILD_DIR/package.json"
+
+    # Insere o bloco "overrides": { "newrelic": "11.23.2" } antes da linha "keywords"
+    sed -i '/"keywords":/i \
+  "overrides": {\n    "newrelic": "11.23.2"\n  },' "$BUILD_DIR/package.json"
+    rm -f "$BUILD_DIR/package-lock.json"
+  fi
+
   npm install --omit=dev --prefix $BUILD_DIR
 
   NEWRELIC_AGENT_VERSION=$(npm list newrelic --prefix "$BUILD_DIR" \

@@ -1,7 +1,7 @@
 FROM node:16 AS builder
 
 RUN apt-get update \
-    && apt-get install -y curl unzip zip jq
+    && apt-get install -y curl unzip zip
 
 RUN useradd -m newrelic-lambda-layers
 USER newrelic-lambda-layers
@@ -9,7 +9,6 @@ WORKDIR /home/newrelic-lambda-layers
 
 COPY --chown=newrelic-lambda-layers libBuild.sh .
 COPY --chown=newrelic-lambda-layers nodejs nodejs/
-COPY --chown=newrelic-lambda-layers nodejs/package.node16.json nodejs/package.json
 
 WORKDIR nodejs
 RUN ./publish-layers.sh build-16
@@ -24,8 +23,6 @@ ENV PATH=/home/newrelic-lambda-layers/.local/bin/:$PATH
 
 COPY libBuild.sh .
 COPY nodejs nodejs/
-COPY nodejs/package.node16.json nodejs/package.json
-
 COPY --from=builder /home/newrelic-lambda-layers/nodejs/dist nodejs/dist
 
 WORKDIR nodejs
