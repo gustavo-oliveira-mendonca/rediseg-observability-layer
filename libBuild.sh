@@ -157,7 +157,7 @@ function layer_name_str() {
       ;;
     esac
 
-    echo "NewRelic${rt_part}${arch_part}"
+    echo "RedisegObservability${rt_part}${arch_part}"
 }
 
 function s3_prefix() {
@@ -284,7 +284,7 @@ function publish_layer {
    else arch_flag=""
    fi
 
-    base_description="New Relic Layer for ${runtime_name} (${arch})"
+    base_description="Rediseg Observability Layer for ${runtime_name} (${arch})"
 
     if [[ $newrelic_agent_version != "none" ]]; then
         extension_info=" with New Relic Extension v${EXTENSION_VERSION}"
