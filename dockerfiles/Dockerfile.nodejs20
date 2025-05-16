@@ -26,4 +26,4 @@ COPY nodejs nodejs/
 COPY --from=builder /home/newrelic-lambda-layers/nodejs/dist nodejs/dist
 
 WORKDIR nodejs
-CMD ["./publish-layers.sh","publish-10]
+CMD ["./publish-layers.sh","publish-20"]
