@@ -206,3 +206,9 @@ publish-nodejs22-local: build-nodejs22
 # 		-e AWS_PROFILE \
 # 		-v "${HOME}/.aws:/home/newrelic-lambda-layers/.aws" \
 # 		newrelic-lambda-layers-ruby34
+
+NODEJS_VERSIONS := 16 18 20 22
+
+.PHONY: publish-all-nodejs
+
+publish-all-nodejs: $(addprefix publish-nodejs, $(addsuffix -local, $(NODEJS_VERSIONS)))
