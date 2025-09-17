@@ -19,7 +19,7 @@ if (
 const newrelic = require('newrelic')
 const fs = require('node:fs')
 const path = require('node:path')
-const logger = require('@rediseg/logger-debug')
+const logger = require('@rediseg/logger')
 
 function wrapWithLogger(userHandler) {
   return async function handler(event, context) {

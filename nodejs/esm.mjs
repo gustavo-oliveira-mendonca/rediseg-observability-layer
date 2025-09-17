@@ -1,4 +1,4 @@
-import logger from '@rediseg/logger-debug'
+import logger from '@rediseg/logger'
 import newrelic from 'newrelic'
 import fs from 'node:fs'
 import path from 'node:path'
